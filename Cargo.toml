@@ -1,0 +1,8 @@
+[package]
+name = "openvictoria"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+egui = "0.24.1"
+eframe = "0.24.1"
