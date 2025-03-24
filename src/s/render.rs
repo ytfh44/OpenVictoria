@@ -285,10 +285,6 @@ impl RenderSystem {
     
     // Draw end turn button
     pub fn draw_end_turn_button(ui: &mut egui::Ui) -> bool {
-        let button = egui::Button::new("End Turn")
-            .min_size(egui::Vec2::new(100.0, 30.0))
-            .rounding(5.0);
-        
-        ui.add_sized([100.0, 30.0], button).clicked()
+        ui.button("结束回合").clicked()
     }
 } 
