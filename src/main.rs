@@ -1,10 +1,11 @@
 use eframe::{egui, App, Frame};
-use egui::{Pos2, Color32, RichText, Align, Layout, Vec2};
+use egui::{Pos2, Color32, RichText, Align, Layout};
 
 // 导入我们自己的库
-use openvictoria::{World, HexMapFactory};
+use openvictoria::{World, HexMapFactory, Locale};
 use openvictoria::s::{InputSystem, RenderSystem};
 use openvictoria::c::*;
+use openvictoria::i18n::Language;
 
 // 游戏界面状态
 #[derive(PartialEq)]
@@ -26,6 +27,7 @@ struct MyApp {
     show_help: bool,
     show_debug: bool,
     show_unit_info: bool,
+    locale: Locale,
 }
 
 impl Default for MyApp {
@@ -40,6 +42,7 @@ impl Default for MyApp {
             show_help: false,
             show_debug: false,
             show_unit_info: true,
+            locale: Locale::new(Language::Chinese), // 默认使用中文
         }
     }
 }
@@ -63,25 +66,25 @@ impl MyApp {
             ui.vertical_centered(|ui| {
                 ui.add_space(100.0);
                 
-                ui.heading(RichText::new("OpenVictoria").size(50.0).color(Color32::GOLD));
-                ui.label(RichText::new("六边形回合制策略游戏").size(20.0));
+                ui.heading(RichText::new(self.locale.get_message("app-title")).size(50.0).color(Color32::GOLD));
+                ui.label(RichText::new(self.locale.get_message("app-subtitle")).size(20.0));
                 
                 ui.add_space(50.0);
                 
-                if ui.button(RichText::new("开始游戏").size(24.0)).clicked() {
+                if ui.button(RichText::new(self.locale.get_message("start-game")).size(24.0)).clicked() {
                     self.initialize_game();
                 }
                 
-                if ui.button(RichText::new("游戏设置").size(24.0)).clicked() {
+                if ui.button(RichText::new(self.locale.get_message("game-settings")).size(24.0)).clicked() {
                     self.game_screen = GameScreen::Settings;
                 }
                 
-                if ui.button(RichText::new("退出").size(24.0)).clicked() {
+                if ui.button(RichText::new(self.locale.get_message("exit")).size(24.0)).clicked() {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
                 
                 ui.add_space(30.0);
-                ui.label("版本 0.1.0 - BSD-0 许可证");
+                ui.label(self.locale.get_message("version-info"));
             });
         });
     }
@@ -91,30 +94,42 @@ impl MyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(50.0);
-                ui.heading("游戏设置");
+                ui.heading(self.locale.get_message("settings-title"));
                 ui.add_space(20.0);
                 
                 ui.horizontal(|ui| {
-                    ui.label("地图大小: ");
-                    ui.add(egui::Slider::new(&mut self.map_size, 4..=12).text("格"));
+                    ui.label(self.locale.get_message("map-size"));
+                    ui.add(egui::Slider::new(&mut self.map_size, 4..=12).text(""));
                 });
                 
                 ui.horizontal(|ui| {
-                    ui.label("六边形大小: ");
-                    ui.add(egui::Slider::new(&mut self.hex_size, 20.0..=50.0).text("像素"));
+                    ui.label(self.locale.get_message("hex-size"));
+                    ui.add(egui::Slider::new(&mut self.hex_size, 20.0..=50.0).text(""));
                 });
                 
-                ui.checkbox(&mut self.show_unit_info, "显示单位信息面板");
-                ui.checkbox(&mut self.show_debug, "显示调试信息");
+                ui.checkbox(&mut self.show_unit_info, &self.locale.get_message("show-unit-info"));
+                ui.checkbox(&mut self.show_debug, &self.locale.get_message("show-debug"));
+                
+                // 语言选择
+                ui.separator();
+                ui.heading("Language / 语言");
+                ui.horizontal(|ui| {
+                    if ui.selectable_label(*self.locale.get_language() == Language::English, "English").clicked() {
+                        self.locale.set_language(Language::English);
+                    }
+                    if ui.selectable_label(*self.locale.get_language() == Language::Chinese, "中文").clicked() {
+                        self.locale.set_language(Language::Chinese);
+                    }
+                });
                 
                 ui.add_space(30.0);
                 
                 ui.horizontal(|ui| {
-                    if ui.button("返回").clicked() {
+                    if ui.button(self.locale.get_message("back")).clicked() {
                         self.game_screen = GameScreen::MainMenu;
                     }
                     
-                    if ui.button("应用并开始游戏").clicked() {
+                    if ui.button(self.locale.get_message("apply-and-start")).clicked() {
                         self.initialize_game();
                     }
                 });
@@ -129,22 +144,22 @@ impl MyApp {
                 ui.add_space(100.0);
                 
                 if self.player_won {
-                    ui.heading(RichText::new("胜利！").size(50.0).color(Color32::GOLD));
+                    ui.heading(RichText::new(self.locale.get_message("victory-title")).size(50.0).color(Color32::GOLD));
                     ui.add_space(20.0);
-                    ui.label("你成功击败了所有敌人！");
+                    ui.label(self.locale.get_message("victory-message"));
                 } else {
-                    ui.heading(RichText::new("失败").size(50.0).color(Color32::RED));
+                    ui.heading(RichText::new(self.locale.get_message("defeat-title")).size(50.0).color(Color32::RED));
                     ui.add_space(20.0);
-                    ui.label("你的部队被全部消灭了。");
+                    ui.label(self.locale.get_message("defeat-message"));
                 }
                 
                 ui.add_space(30.0);
                 
-                if ui.button("返回主菜单").clicked() {
+                if ui.button(self.locale.get_message("return-to-menu")).clicked() {
                     self.game_screen = GameScreen::MainMenu;
                 }
                 
-                if ui.button("重新开始").clicked() {
+                if ui.button(self.locale.get_message("restart")).clicked() {
                     self.initialize_game();
                 }
             });
@@ -153,25 +168,25 @@ impl MyApp {
     
     // 显示帮助面板
     fn render_help_window(&mut self, ctx: &egui::Context) {
-        egui::Window::new("游戏帮助")
+        egui::Window::new(self.locale.get_message("help-title"))
             .open(&mut self.show_help)
             .show(ctx, |ui| {
-                ui.label("游戏操作：");
-                ui.label("• 点击单位选择它");
-                ui.label("• 绿色格子表示移动范围");
-                ui.label("• 红色格子表示攻击范围");
-                ui.label("• 点击「结束回合」按钮结束当前回合");
+                ui.label(self.locale.get_message("help-controls-header"));
+                ui.label(self.locale.get_message("help-click-unit"));
+                ui.label(self.locale.get_message("help-green-tiles"));
+                ui.label(self.locale.get_message("help-red-tiles"));
+                ui.label(self.locale.get_message("help-end-turn"));
                 ui.add_space(10.0);
-                ui.label("单位类型：");
-                ui.label("• 步兵 - 基础单位，均衡的攻防能力");
-                ui.label("• 弓箭手 - 远程单位，可以从距离攻击");
-                ui.label("• 骑兵 - 机动单位，移动范围更大");
+                ui.label(self.locale.get_message("help-unit-types-header"));
+                ui.label(self.locale.get_message("help-infantry"));
+                ui.label(self.locale.get_message("help-archer"));
+                ui.label(self.locale.get_message("help-cavalry"));
                 ui.add_space(10.0);
-                ui.label("地形类型：");
-                ui.label("• 平原 - 正常通行");
-                ui.label("• 森林 - 通行减慢");
-                ui.label("• 山脉 - 通行困难");
-                ui.label("• 水域 - 无法通行");
+                ui.label(self.locale.get_message("help-terrain-header"));
+                ui.label(self.locale.get_message("help-plains"));
+                ui.label(self.locale.get_message("help-forest"));
+                ui.label(self.locale.get_message("help-mountain"));
+                ui.label(self.locale.get_message("help-water"));
             });
     }
     
@@ -183,17 +198,21 @@ impl MyApp {
                     if let Some(unit_stats) = self.ecs_world.get_component::<UnitStats>(hover_entity) {
                         if let Some(unit_state) = self.ecs_world.get_component::<UnitState>(hover_entity) {
                             if let Some(team) = self.ecs_world.get_component::<Team>(hover_entity) {
-                                egui::Window::new("单位信息")
+                                egui::Window::new(self.locale.get_message("unit-info-title"))
                                     .anchor(egui::Align2::RIGHT_TOP, [-10.0, 10.0])
                                     .show(ctx, |ui| {
                                         // 单位类型和所属方
                                         let unit_type_name = match unit_stats.unit_type {
-                                            UnitType::Infantry => "步兵",
-                                            UnitType::Archer => "弓箭手",
-                                            UnitType::Cavalry => "骑兵",
+                                            UnitType::Infantry => self.locale.get_message("unit-type-infantry"),
+                                            UnitType::Archer => self.locale.get_message("unit-type-archer"),
+                                            UnitType::Cavalry => self.locale.get_message("unit-type-cavalry"),
                                         };
                                         
-                                        let team_name = if team.team_id == 0 { "玩家" } else { "敌人" };
+                                        let team_name = if team.team_id == 0 { 
+                                            self.locale.get_message("team-player")
+                                        } else { 
+                                            self.locale.get_message("team-enemy")
+                                        };
                                         let team_color = if team.team_id == 0 { Color32::BLUE } else { Color32::RED };
                                         
                                         ui.horizontal(|ui| {
@@ -205,7 +224,7 @@ impl MyApp {
                                         
                                         // 单位属性
                                         ui.horizontal(|ui| {
-                                            ui.label("生命值:");
+                                            ui.label(self.locale.get_message("health"));
                                             let health_percent = unit_state.health as f32 / unit_stats.max_health as f32;
                                             let health_color = if health_percent < 0.3 {
                                                 Color32::RED
@@ -219,45 +238,47 @@ impl MyApp {
                                         });
                                         
                                         ui.horizontal(|ui| {
-                                            ui.label("攻击力:");
+                                            ui.label(self.locale.get_message("attack"));
                                             ui.label(format!("{}", unit_stats.attack));
                                         });
                                         
                                         ui.horizontal(|ui| {
-                                            ui.label("防御力:");
+                                            ui.label(self.locale.get_message("defense"));
                                             ui.label(format!("{}", unit_stats.defense));
                                         });
                                         
                                         ui.horizontal(|ui| {
-                                            ui.label("攻击范围:");
+                                            ui.label(self.locale.get_message("attack-range"));
                                             ui.label(format!("{}", unit_stats.range));
                                         });
                                         
                                         ui.horizontal(|ui| {
-                                            ui.label("剩余移动力:");
+                                            ui.label(self.locale.get_message("movement-left"));
                                             ui.label(format!("{}/{}", unit_state.movement_left, unit_stats.movement));
                                         });
                                         
                                         // 单位状态
                                         ui.separator();
                                         if unit_state.has_acted {
-                                            ui.label(RichText::new("已行动").color(Color32::GRAY));
+                                            ui.label(RichText::new(self.locale.get_message("unit-acted")).color(Color32::GRAY));
                                         } else {
-                                            ui.label(RichText::new("可行动").color(Color32::GREEN));
+                                            ui.label(RichText::new(self.locale.get_message("unit-can-act")).color(Color32::GREEN));
                                         }
                                         
                                         // 获取地形信息
                                         if let Some(terrain) = self.ecs_world.get_component::<Terrain>(hover_entity) {
-                                            let terrain_name = match terrain.terrain_type {
-                                                TerrainType::Plain => "平原",
-                                                TerrainType::Forest => "森林",
-                                                TerrainType::Mountain => "山脉",
-                                                TerrainType::Water => "水域",
+                                            let terrain_type_key = match terrain.terrain_type {
+                                                TerrainType::Plain => "help-plains",
+                                                TerrainType::Forest => "help-forest",
+                                                TerrainType::Mountain => "help-mountain",
+                                                TerrainType::Water => "help-water",
                                             };
                                             
                                             ui.separator();
-                                            ui.label(format!("地形: {}", terrain_name));
-                                            ui.label(format!("移动消耗: {}", terrain.terrain_type.movement_cost()));
+                                            ui.label(format!("{} {}", self.locale.get_message("terrain"), 
+                                                       terrain_type_key.trim_start_matches("help-").trim_start_matches("• ")));
+                                            ui.label(format!("{} {}", self.locale.get_message("movement-cost"), 
+                                                       terrain.terrain_type.movement_cost()));
                                         }
                                     });
                             }
@@ -275,13 +296,13 @@ impl MyApp {
                 // 当前回合信息
                 ui.horizontal(|ui| {
                     let current_turn_text = if game_state.current_turn == 0 { 
-                        RichText::new("玩家回合").color(Color32::BLUE)
+                        RichText::new(self.locale.get_message("player-turn")).color(Color32::BLUE)
                     } else { 
-                        RichText::new("敌人回合").color(Color32::RED)
+                        RichText::new(self.locale.get_message("enemy-turn")).color(Color32::RED)
                     };
                     
                     ui.label(current_turn_text);
-                    ui.label(format!("第 {} 回合", game_state.turn_number));
+                    ui.label(self.locale.get_message_args("turn-number", &[("number", &game_state.turn_number.to_string())]));
                 });
                 
                 ui.separator();
@@ -377,11 +398,11 @@ impl App for MyApp {
                         });
                         
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            if ui.button("帮助").clicked() {
+                            if ui.button(self.locale.get_message("help")).clicked() {
                                 self.show_help = !self.show_help;
                             }
                             
-                            if ui.button("菜单").clicked() {
+                            if ui.button(self.locale.get_message("menu")).clicked() {
                                 self.game_screen = GameScreen::MainMenu;
                             }
                         });
@@ -411,21 +432,21 @@ impl App for MyApp {
                     // Draw UI controls in a side panel
                     egui::SidePanel::right("controls").show_inside(ui, |ui| {
                         ui.vertical_centered(|ui| {
-                            ui.heading("控制面板");
+                            ui.heading(self.locale.get_message("control-panel"));
                             ui.add_space(10.0);
                             
                             // 回合信息
                             self.render_game_status(ui);
                             
                             // 结束回合按钮
-                            if ui.add_sized([120.0, 30.0], egui::Button::new("结束回合")).clicked() {
+                            if ui.add_sized([120.0, 30.0], egui::Button::new(self.locale.get_message("end-turn"))).clicked() {
                                 self.end_turn_clicked = true;
                             }
                             
                             ui.add_space(20.0);
-                            ui.label("点击单位选择它");
-                            ui.label("绿色格子表示移动范围");
-                            ui.label("红色格子表示攻击范围");
+                            ui.label(self.locale.get_message("click-to-select"));
+                            ui.label(self.locale.get_message("help-green-tiles"));
+                            ui.label(self.locale.get_message("help-red-tiles"));
                             
                             ui.separator();
                             
@@ -433,30 +454,30 @@ impl App for MyApp {
                             let player_count = self.count_units(0);
                             let enemy_count = self.count_units(1);
                             
-                            ui.heading("单位数量");
+                            ui.heading(self.locale.get_message("unit-info-title"));
                             ui.horizontal(|ui| {
-                                ui.label("玩家:");
+                                ui.label(self.locale.get_message("player-units"));
                                 ui.label(RichText::new(format!("{}", player_count)).color(Color32::BLUE));
                             });
                             
                             ui.horizontal(|ui| {
-                                ui.label("敌人:");
+                                ui.label(self.locale.get_message("enemy-units"));
                                 ui.label(RichText::new(format!("{}", enemy_count)).color(Color32::RED));
                             });
                             
                             ui.separator();
                             
-                            if ui.button("主菜单").clicked() {
+                            if ui.button(self.locale.get_message("menu")).clicked() {
                                 self.game_screen = GameScreen::MainMenu;
                             }
                             
-                            if ui.button("设置").clicked() {
+                            if ui.button(self.locale.get_message("game-settings")).clicked() {
                                 self.game_screen = GameScreen::Settings;
                             }
                             
                             // 调试开关
-                            ui.checkbox(&mut self.show_debug, "显示调试信息");
-                            ui.checkbox(&mut self.show_unit_info, "显示单位信息");
+                            ui.checkbox(&mut self.show_debug, &self.locale.get_message("show-debug"));
+                            ui.checkbox(&mut self.show_unit_info, &self.locale.get_message("show-unit-info"));
                         });
                     });
                 });
@@ -489,7 +510,7 @@ fn main() -> eframe::Result<()> {
     };
     
     eframe::run_native(
-        "OpenVictoria 六边形策略游戏",
+        "OpenVictoria",
         options,
         Box::new(|_cc| Box::new(MyApp::default()))
     )

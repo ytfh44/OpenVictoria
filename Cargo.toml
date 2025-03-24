@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 egui = "0.24.1"
 eframe = "0.24.1"
+fluent = "0.16.1"
+fluent-bundle = "0.15.3"
+unic-langid = "0.9.5"
